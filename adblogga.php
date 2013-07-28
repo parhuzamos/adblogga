@@ -98,7 +98,7 @@
     	echo(c("[adblogga]", $fg['black'], $bg['yellow_dim']).c(" ".date("H:i:s")." ", $fg['white'], $bg['black_dim']).$message.($breakline ? PHP_EOL : ""));
     }
 
-    function outputLine(&$line) {
+    function outputLine($line) {
     	global $typecolors, $fg, $bg;
 
 		$match = array();
@@ -191,7 +191,7 @@
 	
 				$adbout = $pipes[1];
 				$firstmessage = true;
-				while (true) { 
+				while (true) {
 					$in = array($adbout, STDIN);
 					$empty = array();
 					if (!@stream_select($in, $empty, $empty, null)) {
@@ -337,6 +337,8 @@
 							ec("Clear pattern found. Clearing output. ( ".$line." )");
 						}
 					}
+					
+					outputLine($line);
 				} 
 			} else {
 				ec("Error: could not start \"".ADB_COMMAND_LINE."\"");
