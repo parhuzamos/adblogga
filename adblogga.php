@@ -93,35 +93,6 @@
         }
     }
 
-    function getProcesses($filter = null) {
-    	$filter = strtolower($filter);
-
-    	exec(ADB." shell ps", $out, $status);
-
-    	if ($status == 0) {
-    		$i = 0;
-
-    		$processes = array();
-    		foreach($out as $line) {
-    			if ($filter && strpos($line, $filter) === false) {
-    				continue;
-    			}
-    			if (preg_match("/^([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+(.*)/", $line, $match)) {
-    				$processes[$match[9]] = $match[2];
-    			}
-    		}
-
-    		if ($filter && (count($processes) == 1)) {
-   				return reset($processes);
-    		} else {
-    			return $processes;
-    		}
-    	} else {
-    		return null;
-    	}
-
-    }
-
     function ec($message, $breakline = true) {
     	global $fg, $bg;
     	echo(c("[adblogga]", $fg['black'], $bg['yellow_dim']).c(" ".date("H:i:s")." ", $fg['white'], $bg['black_dim']).$message.($breakline ? PHP_EOL : ""));
