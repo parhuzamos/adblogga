@@ -178,8 +178,6 @@
     			2 => array('pipe', 'a') // stderr
     	);
     	
-		$resettime = 0;
-
 		//TODO: use the built in cmdline arguments processor function, add -c param
 		$clear = array_search("--clear", $argv);
 		if ($clear) {
@@ -313,9 +311,6 @@
 									ec("?						this help");
 								} else if (($input == "exit") || ($input == "x")) {
 									break;
-								} else if ($input == "'") {
-									//reset the buffer
-									$resettime = microtime();
 								} else {
 									ec("Unknown command: ".$input);
 								}
@@ -370,11 +365,6 @@
 							exec(ADB.' logcat -c && reset');
 							ec("Clear pattern found. Clearing output. ( ".$line." )");
 						}
-					}
-	
-					if (($resettime == 0) || ($resettime+1000 > microtime())) {
-						outputLine($line);
-						$resettime = 0;
 					}
 				} 
 			} else {
