@@ -64,6 +64,7 @@ Soon...
 * getopt()
 * save current profile
 * load profile
+* install script
 
 
 ...
