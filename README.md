@@ -65,7 +65,9 @@ Soon...
 * save current profile
 * load profile
 * install script
-
+* process/package support
+* Mac support
+* Windows support
 
 ...
 ---
