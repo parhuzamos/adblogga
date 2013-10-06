@@ -6,6 +6,7 @@
 	define("ADB_COMMAND_LINE", ADB." logcat -v time");
 	define("LINE_REG_EXP", '/^([^\s]+)\s+([^\s]+)\s+([A-Z])\/(.*?)\((.*?)\):\s(.*)$/');
 
+	define("MAX_DELAY_BETWEEN_PROCID_UPDATE", 5);
 
 	$fg = array();
 	$fg['black'] = '0;30';
@@ -53,6 +54,60 @@
 		"F" => array($fg['black'], $bg['red']),
 	);
 
+	$lastProcCollectTime = 0;
+	$lastProcCollectFilename = "";
+	$processIds = array();
+
+	function procStartCollect() {
+		global $lastProcCollectTime;
+		global $lastProcCollectFilename;
+
+		//TODO: only exec every second sec
+		$lastProcCollectTime = time();
+		$lastProcCollectFilename = "/tmp/adblogga-proc.tmp";
+		shell_exec("nohup adb shell ps >$lastProcCollectFilename &");
+	}
+
+	function updateProcessIds($force = false, $filter = null) {
+		global $lastProcCollectTime;
+		global $processIds;
+
+		$time = time();
+		if ((!$force) && ($lastProcCollectTime + MAX_DELAY_BETWEEN_PROCID_UPDATE > $time)) {
+			return;
+		}
+		$lastProcCollectTime = $time;
+
+		//ec("updateProcessIds $time");
+
+	    $filter = strtolower($filter);
+
+	    exec(ADB." shell ps", $out, $status);
+
+	    if ($status == 0) {
+	        $i = 0;
+
+	        $processes = array();
+	        foreach($out as $line) {
+	        	if ($filter && strpos($line, $filter) === false) {
+	            	continue;
+	        	}
+	        	if (preg_match("/^([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+(.*)/", $line, $match)) {
+	            	$processes[$match[9]] = $match[2];
+	        	}
+	    	}
+
+	    	if ($filter && (count($processes) == 1)) {
+	        	$processIds = reset($processes);
+		    } else {
+		        $processIds = $processes;
+	    	}
+	    } else {
+	    	return null;
+	    }
+	}
+
+
 	function c($str, $color, $bgcolor = null) {
 		return sprintf("\033[%s%sm%s\033[0m", $color, $bgcolor ? ';' . $bgcolor : "", $str);
 	}
@@ -98,7 +153,7 @@
     	echo(c("[adblogga]", $fg['black'], $bg['yellow_dim']).c(" ".date("H:i:s")." ", $fg['white'], $bg['black_dim']).$message.($breakline ? PHP_EOL : ""));
     }
 
-    function outputLine($line) {
+    function outputLine($line, $isIncluded, $onlyProcessId) {
     	global $typecolors, $fg, $bg;
 
 		$match = array();
@@ -107,11 +162,17 @@
 			return;
 		}
 
+		//skip lines not matching the given processId
+		$processId = $match[5];
+		if (($isIncluded == false) && (($onlyProcessId != $processId) && ($onlyProcessId != null))) {
+			return;
+		}
+
 		//date+time
 		echo(c($match[2].' ', $fg['white'], $bg['black_dim']));
 
 		//process
-		echo(c(str_pad($match[5], 8, ' ', STR_PAD_BOTH), $fg['black'], $bg['black_bright']));
+		echo(c(str_pad($processId, 8, ' ', STR_PAD_BOTH), $fg['black'], $bg['black_bright']));
 
 		//thread?
 		//echo(c(str_pad($match[4], 8, ' ', STR_PAD_LEFT), $fg['black'], $bg['black_bright']));
@@ -133,28 +194,32 @@
     function setup() {
     	pcntl_signal(SIGTERM, "signal_handler");
     	pcntl_signal(SIGINT, "signal_handler");
-    	
+
     	if (file_exists(ADB) == FALSE) {
     		echo("Error: adb executable not found. Please, define the ANDROID_HOME environment variable which should point to your Android SDK root.\n");
     		echo("Aborting.\n");
-    		
+
     		exit(1);
     	}
     }
 
     function main($argv) {
+    	global $processIds;
+
     	$descriptorspec = array(
     			0 => array('pipe', 'r'), // stdin
     			1 => array('pipe', 'w'), // stdout
     			2 => array('pipe', 'a') // stderr
     	);
-    	
+
 		//TODO: use the built in cmdline arguments processor function, add -c param
 		$clear = array_search("--clear", $argv);
 		if ($clear) {
 			$clear = $argv[$clear+1];
 		}
-		
+
+		$onlyPackage = @$argv[1];
+
 		//TODO: use the built in cmdline arguments processor function, add -p param
 		$profile = array_search("--profile", $argv);
 		if ($profile) {
@@ -162,11 +227,11 @@
 		} else {
 			$profile = "";
 		}
-		
+
 		$home = getenv("HOME");
 		$excludesfile = sprintf($home."/.config/adblogga/%s-excludes.txt", $profile);
 		$includesfile = sprintf($home."/.config/adblogga/%s-includes.txt", $profile);
-	
+
 		if (($profile) && (file_exists($excludesfile))) {
 			$excludes = array_filter(preg_split("/\n/", file_get_contents($excludesfile)));
 		} else {
@@ -177,18 +242,18 @@
 		} else {
 			$includes = array();
 		}
-	
+
 		ec("Started.");
 		stream_set_blocking(STDIN, 0);
-	
+
 		while(true) {
 			$exited = false;
 			$process = proc_open(ADB_COMMAND_LINE, $descriptorspec, $pipes);
-	
+
 			if (is_resource($process)) {
-				fclose($pipes[0]); 
-				fclose($pipes[2]); 
-	
+				fclose($pipes[0]);
+				fclose($pipes[2]);
+
 				$adbout = $pipes[1];
 				$firstmessage = true;
 				while (true) {
@@ -199,8 +264,8 @@
 						break;
 					}
 					$adbdata = array_search($adbout, $in);
-					$userinput = array_search(STDIN, $in); 
-	
+					$userinput = array_search(STDIN, $in);
+
 					// check if device is unplugged (because adb logcat is stopped then)
 					$sta = proc_get_status($process);
 					if (@$sta['running'] == false) {
@@ -208,16 +273,23 @@
 						$exited = true;
 						break;
 					}
-	
+
+					updateProcessIds();
+
 					if ($userinput !== false) {
 						$char = fgetc(STDIN);
 						if (ord($char) == 10) {
 							stream_set_blocking(STDIN, 1);
 							ec("Enter command: ", false);
-							$input = fgets(STDIN); 
+							$input = fgets(STDIN);
 							$input = trim($input);
 							if ($input) {
-								if ($input == "c") {
+								if ($input[0] == ":") {
+									$onlyPackage = strtolower(substr($input, 1));
+									ec("Showing log entries from package: \"".$onlyPackage."\".");
+									ec("Press Enter to continue...", false);
+									fgets(STDIN);
+								} else if ($input == "c") {
 									exec('reset');
 									ec("Clear command received.");
 									continue;
@@ -233,7 +305,7 @@
 											ec("Removed from includes: ".$exclude);
 											unset($includes[$in]);
 											if ($profile) {
-												file_put_contents($includesfile, join("\n", $includes));		
+												file_put_contents($includesfile, join("\n", $includes));
 											}
 										} else {
 											$excludes[] = $exclude;
@@ -263,15 +335,19 @@
 									fgets(STDIN);
 								} else if ($input == "!") {
 									ec("Settings: ");
+									echo("Package: ".($onlyPackage ? $onlyPackage : "<none>").PHP_EOL);
 									echo("Profile: $profile".PHP_EOL);
 									echo("Clear if: $clear".PHP_EOL);
 									ec("Includes: ");
 									echo(join("\n", $includes).PHP_EOL);
 									ec("Excludes: ");
 									echo(join("\n", $excludes).PHP_EOL);
+									ec("Press Enter to continue...", false);
+									fgets(STDIN);
 								} else if ($input == "?") {
 									ec("Help.");
 									ec("Accepted commands are:");
+									ec(":<packagename>			only show messages from given package (com.example.application1)");
 									ec("+<something>			add to include list");
 									ec("-<something>			add to exclude list");
 									ec("!						show settings, includes and excludes");
@@ -293,18 +369,18 @@
 							stream_set_blocking(STDIN, 0);
 						}
 					}
-	
+
 					if ($adbdata === false) {
 						continue;
 					}
 					$line = fgets($adbout, 1024);
 					$loline = strtolower($line);
-	
+
 					if ($firstmessage) {
 						$firstmessage = false;
 						ec("Connected.");
 					}
-	
+
 					if ($excludes) {
 						$skip = false;
 						foreach($excludes as $exclude) {
@@ -317,37 +393,49 @@
 							continue;
 						}
 					}
+
+					if ($onlyPackage && ((strpos($loline, $onlyPackage) !== false) && ((strpos($line, "ActivityManager") !== false) || (strpos($line, "WindowState") !== false) || (strpos($line, "ACTIVITY_STATE") !== false)))) {
+						ec("Updating process ids (\"$onlyPackage\")...");
+						updateProcessIds(true);
+					}
+
+					$processId = @$processIds[$onlyPackage];
+					if ($onlyPackage) {
+						$processId = $processId ? $processId : 1;
+					}
+
+					$isIncluded = false;
 					if ($includes) {
-						$skip = false;
+						$skip = true;
 						foreach($includes as $include) {
-							$skip = true;
 							if (strpos($loline, $include) !== false) {
 								$skip = false;
+								$isIncluded = true;
 								break;
 							}
 						}
-						if ($skip) {
+						if ($skip && $processId == null) {
 							continue;
 						}
 					}
-	
+
 					if ($clear) {
 						if (strpos($line, $clear) !== FALSE) {
 							exec(ADB.' logcat -c && reset');
 							ec("Clear pattern found. Clearing output. ( ".$line." )");
 						}
 					}
-					
-					outputLine($line);
-				} 
+
+					outputLine($line, $isIncluded, $processId);
+				}
 			} else {
 				ec("Error: could not start \"".ADB_COMMAND_LINE."\"");
 			}
-	
+
 			ec("Closing handle and process...");
-			@fclose($adbout); 
+			@fclose($adbout);
 			@proc_terminate($process);
-	
+
 			if ($exited) {
 				ec("Restarting...");
 			} else {
@@ -355,9 +443,9 @@
 				break;
 			}
 		}
-	
+
 		ec("Finished.");
     }
-    
+
     setup();
     main($argv);
