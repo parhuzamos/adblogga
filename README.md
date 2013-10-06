@@ -12,6 +12,7 @@ Why?
 * easy to clear the screen (press Enter, then "c" then Enter)
 * easy to log only some messages (press Enter, type "+WifiService" then Enter => **only** message containing "WifiService" will be displayed)
 * easy to exclude some message (press Enter, type "-dalvikvm" then Enter => no message containing "dalvikvm" displayed)
+* specify a package name on the command line to show only it's messages (more include and exclude entries can be added of course)
 * profiles support (collection of include and exclude definitions)
 
 [![A picture is worth thousand words.](http://parhuzamos.github.io/adblogga/images/20130728225034-420481645.png)](#)
@@ -24,33 +25,40 @@ Install!
 
 Clone the repo:
 
-	git clone https://github.com/parhuzamos/adblogga.git 
-	
+	git clone https://github.com/parhuzamos/adblogga.git
+
 Switch to the repo:
 
 	cd adblogga
-	
+
 Create a symlink into your favorite directory in the path (eg ~/bin):
 
 	ln -s `pwd`/adblogga.php ~/bin/adblogga
-	
+
 Use it:
 
 	adblogga
-	
+
 
 
 How?
 ----
 
+Start from the command line (remember, you have to start only once, it can be running for days/weeks, no restart required!):
+
+	# start colored log cat and show the messages from "com.example" process, also load include/exclude filters from the profile "controls"
+	$ adblogga com.example --profile controls
+
 Soon...
-* command line parameters (--profile, --clear)
+* more command line parameters (--clear)
 * include
 * exclude
 * clear
+* +<string> - only include this <string> message (can be specified multiple times)
 * +*
-* -* instead use +something
-
+* -* - instead use +something
+* ! - show settings
+* :<package> - show message from only <package> process/package
 
 More?
 -----
@@ -62,10 +70,12 @@ Todo!
 -----
 Soon...
 * getopt()
+* store settings in json (also package name)
+* object oriented structure instead of simple functions and global variables
+* default
 * save current profile
 * load profile
 * install script
-* process/package support
 * Mac support
 * Windows support
 
@@ -73,4 +83,4 @@ Soon...
 ---
 
 If you made this far, buy me a drink:
-[![Fund me on Gittip](https://www.gittip.com/assets/7.0.8/logo.png)](https://www.gittip.com/parhuzamos/)
+[![Fund me on Gittip](https://s3-eu-west-1.amazonaws.com/com.parhuzamos/adblogga/gittip-logo.png)](https://www.gittip.com/parhuzamos/)
