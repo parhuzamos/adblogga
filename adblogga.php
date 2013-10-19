@@ -57,6 +57,20 @@
 	$lastProcCollectTime = 0;
 	$lastProcCollectFilename = "";
 	$processIds = array();
+	
+	class Settings {
+		public $excludes = array();
+		public $includes = array();	
+		
+		public $clear = null;
+		
+		public $profile = null;
+		public $profileFileName = null;
+		
+		public $onlyPackage = null;
+	}
+	
+	$settings = null;
 
 	function procStartCollect() {
 		global $lastProcCollectTime;
@@ -202,9 +216,57 @@
     		exit(1);
     	}
     }
+    
+    function saveSettings() {
+    	global $settings;
+    	
+    	if ($settings->profile) {
+    		file_put_contents($settings->profileFileName, json_encode($settings));
+    	}
+    }
+    
+    function getProfileFilename($profile) {
+		$fn = preg_replace("/[^a-z0-9\.]/", "", strtolower($profile));
+		$fn = sprintf(getenv("HOME")."/.config/adblogga/%s.json", $fn);
+		return $fn;
+    }
+    
+    function loadSettings($cmdlineoptions) {
+    	$profile = @$cmdlineoptions["P"];
+    	
+		if ($profile != null) {
+			$fn = getProfileFilename($profile);
+			if (file_exists($fn)) {
+				try {
+					$settings = json_decode(file_get_contents($fn));	
+					$settings->profileFileName = $fn;
+				} catch (Exception $e) {
+					ec("Error occoured while loading profile '$profile' from the file '$fn': ".$e);
+					exit(1);
+				}
+			} else {
+				ec("The profile '$profile' has no settings saved yet.");
+				$settings = new Settings();
+				$settings->profile = $profile;
+				$settings->profileFileName = $fn;
+			}
+		}
+		if ($profile == null) {
+			$settings = new Settings();
+		}
+		if (isset($cmdlineoptions["p"])) {
+			$settings->onlyPackage = $cmdlineoptions["p"];
+		}
+		if (isset($cmdlineoptions["c"])) {
+			$settings->clear = $cmdlineoptions["c"];
+		}
 
-    function main($argv) {
+		return $settings;		
+    }
+
+    function main() {
     	global $processIds;
+    	global $settings;
 
     	$descriptorspec = array(
     			0 => array('pipe', 'r'), // stdin
@@ -212,37 +274,8 @@
     			2 => array('pipe', 'a') // stderr
     	);
 
-		//TODO: use the built in cmdline arguments processor function, add -c param
-		$clear = array_search("--clear", $argv);
-		if ($clear) {
-			$clear = $argv[$clear+1];
-		}
-
-		$onlyPackage = @$argv[1];
-
-		//TODO: use the built in cmdline arguments processor function, add -p param
-		$profile = array_search("--profile", $argv);
-		if ($profile) {
-			$profile = $argv[$profile+1];
-		} else {
-			$profile = "";
-		}
-
-		$home = getenv("HOME");
-		$excludesfile = sprintf($home."/.config/adblogga/%s-excludes.txt", $profile);
-		$includesfile = sprintf($home."/.config/adblogga/%s-includes.txt", $profile);
-
-		if (($profile) && (file_exists($excludesfile))) {
-			$excludes = array_filter(preg_split("/\n/", file_get_contents($excludesfile)));
-		} else {
-			$excludes = array();
-		}
-		if (($profile) && (file_exists($includesfile))) {
-			$includes = array_filter(preg_split("/\n/", file_get_contents($includesfile)));
-		} else {
-			$includes = array();
-		}
-
+    	$settings = loadSettings(getopt("p::P::c::"));
+    	
 		ec("Started.");
 		stream_set_blocking(STDIN, 0);
 
@@ -284,9 +317,22 @@
 							$input = fgets(STDIN);
 							$input = trim($input);
 							if ($input) {
-								if ($input[0] == ":") {
-									$onlyPackage = strtolower(substr($input, 1));
-									ec("Showing log entries from package: \"".$onlyPackage."\".");
+								if ($input[0] == "p") {
+									$settings->onlyPackage = strtolower(substr($input, 1));
+									saveSettings();
+									ec("Showing log entries from package: \"".$settings->onlyPackage."\".");
+									ec("Press Enter to continue...", false);
+									fgets(STDIN);
+								} else if ($input[0] == "l") {
+									$settings = loadSettings(array("P" => substr($input, 1)));
+									ec("Loading profile '{$settings->profile}' from '{$settings->profileFileName}'.");
+									ec("Press Enter to continue...", false);
+									fgets(STDIN);
+								} else if ($input[0] == "s") {
+									$settings->profile = substr($input, 1);
+									$settings->profileFileName = getProfileFilename($settings->profile);
+									saveSettings();
+									ec("Saving profile '{$settings->profile}' to '{$settings->profileFileName}'.");
 									ec("Press Enter to continue...", false);
 									fgets(STDIN);
 								} else if ($input == "c") {
@@ -300,57 +346,59 @@
 								} else if ($input[0] == "-") {
 									$exclude = strtolower(substr($input, 1));
 									if ($exclude) {
-										$in = array_search($exclude, $includes);
+										$in = array_search($exclude, $settings->includes);
 										if ($in !== false) {
 											ec("Removed from includes: ".$exclude);
-											unset($includes[$in]);
-											if ($profile) {
-												file_put_contents($includesfile, join("\n", $includes));
+											unset($settings->includes[$in]);
+											if ($settings->profile) {
+												saveSettings();
 											}
 										} else {
-											$excludes[] = $exclude;
-											$excludes = array_unique($excludes);
-											if ($profile) {
-												file_put_contents($excludesfile, join("\n", $excludes));
+											$settings->excludes[] = $exclude;
+											$settings->excludes = array_unique($settings->excludes);
+											if ($settings->profile) {
+												saveSettings();
 											}
 										}
 									}
 									ec("Excludes are: ");
-									echo(var_export($excludes).PHP_EOL);
+									echo(var_export($settings->excludes).PHP_EOL);
 									ec("Press Enter to continue...", false);
 									fgets(STDIN);
 								} else if ($input[0] == "+") {
 									if ($input == "+*") {
-										$includes = array();
+										$settings->includes = array();
 									} else {
-										$includes[] = strtolower(substr($input, 1));
-										$includes = array_unique($includes);
+										$settings->includes[] = strtolower(substr($input, 1));
+										$settings->includes = array_unique($settings->includes);
 									}
-									if ($profile) {
-										file_put_contents($includesfile, join("\n", $includes));
+									if ($settings->profile) {
+										saveSettings();
 									}
 									ec("Includes are: ");
-									echo(var_export($includes).PHP_EOL);
+									echo(var_export($settings->includes).PHP_EOL);
 									ec("Press Enter to continue...", false);
 									fgets(STDIN);
 								} else if ($input == "!") {
 									ec("Settings: ");
-									echo("Package: ".($onlyPackage ? $onlyPackage : "<none>").PHP_EOL);
-									echo("Profile: $profile".PHP_EOL);
-									echo("Clear if: $clear".PHP_EOL);
+									echo("Package: ".($settings->onlyPackage ? $settings->onlyPackage : "<none>").PHP_EOL);
+									echo("Profile: $settings->profile".PHP_EOL);
+									echo("Clear if: $settings->clear".PHP_EOL);
 									ec("Includes: ");
-									echo(join("\n", $includes).PHP_EOL);
+									echo(join("\n", $settings->includes).PHP_EOL);
 									ec("Excludes: ");
-									echo(join("\n", $excludes).PHP_EOL);
+									echo(join("\n", $settings->excludes).PHP_EOL);
 									ec("Press Enter to continue...", false);
 									fgets(STDIN);
 								} else if ($input == "?") {
 									ec("Help.");
 									ec("Accepted commands are:");
-									ec(":<packagename>			only show messages from given package (com.example.application1)");
+									ec("p<packagename>			only show messages from given package (com.example.application1)");
+									ec("l<profile>				load profile: current settings are overwritten from this profile");
+									ec("s<profile>				save profile: current settings are overwriting the given profile");
 									ec("+<something>			add to include list");
 									ec("-<something>			add to exclude list");
-									ec("!						show settings, includes and excludes");
+									ec("!						show current settings (package, profile, includes, excludes, ...)");
 									ec("c 						clear screen");
 									ec("cc 						clear logcat and screen");
 									ec("exit 					exit adblogga");
@@ -381,9 +429,9 @@
 						ec("Connected.");
 					}
 
-					if ($excludes) {
+					if ($settings->excludes) {
 						$skip = false;
-						foreach($excludes as $exclude) {
+						foreach($settings->excludes as $exclude) {
 							if (strpos($loline, $exclude) !== false) {
 								$skip = true;
 								break;
@@ -394,20 +442,20 @@
 						}
 					}
 
-					if ($onlyPackage && ((strpos($loline, $onlyPackage) !== false) && ((strpos($line, "ActivityManager") !== false) || (strpos($line, "WindowState") !== false) || (strpos($line, "ACTIVITY_STATE") !== false)))) {
-						ec("Updating process ids (\"$onlyPackage\")...");
+					if ($settings->onlyPackage && ((strpos($loline, $settings->onlyPackage) !== false) && ((strpos($line, "ActivityManager") !== false) || (strpos($line, "WindowState") !== false) || (strpos($line, "ACTIVITY_STATE") !== false)))) {
+						ec("Updating process ids (\"$settings->onlyPackage\")...");
 						updateProcessIds(true);
 					}
 
-					$processId = @$processIds[$onlyPackage];
-					if ($onlyPackage) {
+					$processId = @$processIds[$settings->onlyPackage];
+					if ($settings->onlyPackage) {
 						$processId = $processId ? $processId : 1;
 					}
 
 					$isIncluded = false;
-					if ($includes) {
+					if ($settings->includes) {
 						$skip = true;
-						foreach($includes as $include) {
+						foreach($settings->includes as $include) {
 							if (strpos($loline, $include) !== false) {
 								$skip = false;
 								$isIncluded = true;
@@ -419,8 +467,8 @@
 						}
 					}
 
-					if ($clear) {
-						if (strpos($line, $clear) !== FALSE) {
+					if ($settings->clear) {
+						if (strpos($line, $settings->clear) !== FALSE) {
 							exec(ADB.' logcat -c && reset');
 							ec("Clear pattern found. Clearing output. ( ".$line." )");
 						}
@@ -448,4 +496,4 @@
     }
 
     setup();
-    main($argv);
+    main();
