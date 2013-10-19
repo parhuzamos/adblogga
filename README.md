@@ -76,6 +76,7 @@ Soon...
 * save current profile
 * load profile
 * install script
+* multi device support
 * Mac support
 * Windows support
 
