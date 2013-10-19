@@ -150,7 +150,7 @@
 
     function ec($message, $breakline = true) {
     	global $fg, $bg;
-    	echo(c("[adblogga]", $fg['black'], $bg['yellow_dim']).c(" ".date("H:i:s")." ", $fg['white'], $bg['black_dim']).$message.($breakline ? PHP_EOL : ""));
+    	echo(c("[adblogga]", $fg['black'], $bg['yellow_dim']).c(" ".date("H:i:s")." ", $fg['white'], $bg['black_dim'])." ".$message.($breakline ? PHP_EOL : ""));
     }
 
     function outputLine($line, $isIncluded, $onlyProcessId) {
