@@ -97,7 +97,6 @@ Soon...
 
 Todo!
 -----
-* create directorty for config files (~/.config/adblogga or ~/.adblogga)
 * set date.timezone if not set (removes notices for date())
 	/etc/php5/cli/php.ini
 		[Date]

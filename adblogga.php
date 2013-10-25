@@ -227,7 +227,15 @@
     
     function getProfileFilename($profile) {
 		$fn = preg_replace("/[^a-z0-9\.]/", "", strtolower($profile));
-		$fn = sprintf(getenv("HOME")."/.config/adblogga/%s.json", $fn);
+		$home = getenv("HOME");
+		$configdir = $home."/.config/adblogga";
+		if (!file_exists($configdir)) {
+			if (!file_exists($home."/.config")) {
+				$configdir = $home."/.adblogga";
+			}
+			mkdir($configdir);
+		}
+		$fn = sprintf($configdir."/%s.json", $fn);
 		return $fn;
     }
     
