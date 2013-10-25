@@ -97,7 +97,14 @@ Soon...
 
 Todo!
 -----
-Soon...
+* create directorty for config files (~/.config/adblogga or ~/.adblogga)
+* set date.timezone if not set (removes notices for date())
+	/etc/php5/cli/php.ini
+		[Date]
+		date.timezone = Europe/Budapest
+	/etc/php5/cgi/php.ini
+	 date_default_timezone_set('Europe/Budapest');
+* replace/remove pcntl_signal() function on non-Unix systems
 * object oriented structure instead of simple functions and global variables
 * default
 * install script
