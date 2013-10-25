@@ -231,7 +231,7 @@
 		$configdir = $home."/.config/adblogga";
 		if (!file_exists($configdir)) {
 			if (!file_exists($home."/.config")) {
-				$configdir = $home."/adblogga";
+				$configdir = $home."/.adblogga";
 			}
 			mkdir($configdir);
 		}
