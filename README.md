@@ -98,22 +98,8 @@ Soon...
 
 Todo!
 -----
-* set date.timezone if not set (removes notices for date())
-	/etc/php5/cli/php.ini
-		[Date]
-		date.timezone = Europe/Budapest
-	/etc/php5/cgi/php.ini
-	 date_default_timezone_set('Europe/Budapest');
-* replace/remove pcntl_signal() function on non-Unix systems
-* object oriented structure instead of simple functions and global variables
-* default
-* install script
-* multi device support
-* Mac support
-* Windows support
+See & edit here: https://waffle.io/parhuzamos/adblogga
 
-...
----
 
 If you made this far, buy me a drink:
 [![Fund me on Gittip](https://s3-eu-west-1.amazonaws.com/com.parhuzamos/adblogga/gittip-logo.png)](https://www.gittip.com/parhuzamos/)
