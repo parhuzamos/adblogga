@@ -1,5 +1,4 @@
-[![Stories in Ready](https://badge.waffle.io/parhuzamos/adblogga.png?label=ready&title=Ready)](https://waffle.io/parhuzamos/adblogga)
-adblogga
+adblogga [![Stories in Ready](https://badge.waffle.io/parhuzamos/adblogga.png?label=ready&title=Ready)](https://waffle.io/parhuzamos/adblogga)
 ========
 
 Color coded adb (Android Debug Bridge) logcat output with on-the-fly configurable filters for any part of the log entry. It's a terminal program, you shouldn't use your mouse ;).
