@@ -208,6 +208,8 @@
     }
 
     function setup() {
+		date_default_timezone_set(date_default_timezone_get());
+
     	@pcntl_signal(SIGTERM, "signal_handler");
     	@pcntl_signal(SIGINT, "signal_handler");
 
