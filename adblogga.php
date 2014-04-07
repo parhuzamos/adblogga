@@ -68,6 +68,8 @@
 		public $profileFileName = null;
 		
 		public $onlyPackage = null;
+		
+		public $saveToFile = null;
 	}
 	
 	$settings = null;
@@ -268,9 +270,44 @@
 		if (isset($cmdlineoptions["c"])) {
 			$settings->clear = $cmdlineoptions["c"];
 		}
+		if (isset($cmdlineoptions["s"])) {
+			$fn = $cmdlineoptions["s"];
+			if (isset($cmdlineoptions["S"])) {
+				$pi = pathinfo($fn);
+				$fn = sprintf("%s%s%s-%s.%s",$pi["dirname"], DIRECTORY_SEPARATOR, $pi["filename"], date("Ymd-His"), $pi["extension"]);
+			}
+			$settings->saveToFile = $fn;
+			if (touch($settings->saveToFile) === FALSE) {
+				ec("Can't save to file \"{$fn}\".");
+				exit(1);
+			} else {
+				ec("Saving output to \"{$settings->saveToFile}\".");
+			}
+		}
 
 		return $settings;		
     }
+    
+    function appendSettings($profile) {
+		$fn = getProfileFilename($profile);
+		if (file_exists($fn)) {
+			try {
+				$settings = json_decode(file_get_contents($fn));	
+				$settings->profileFileName = $fn;
+			} catch (Exception $e) {
+				ec("Error occoured while loading profile '$profile' from the file '$fn': ".$e);
+				exit(1);
+			}
+		} else {
+			ec("The profile '$profile' has no settings saved yet.");
+			$settings = new Settings();
+			$settings->profile = $profile;
+			$settings->profileFileName = $fn;
+		}
+
+		return $settings;		
+    }
+    
 
     function main() {
     	global $processIds;
@@ -282,10 +319,15 @@
     			2 => array('pipe', 'a') // stderr
     	);
 
-    	$settings = loadSettings(getopt("p::P::c::"));
+    	$settings = loadSettings(getopt("p::P::c::s::S::"));
     	
 		ec("Started.");
 		stream_set_blocking(STDIN, 0);
+		
+		$saveToFile = null;
+		if ($settings->saveToFile) {
+			$saveToFile = fopen($settings->saveToFile, "w");
+		}
 
 		while(true) {
 			$exited = false;
@@ -392,6 +434,7 @@
 									echo("Package: ".($settings->onlyPackage ? $settings->onlyPackage : "<none>").PHP_EOL);
 									echo("Profile: $settings->profile".PHP_EOL);
 									echo("Clear if: $settings->clear".PHP_EOL);
+									echo("Save to file: ".($settings->saveToFile ? $settings->saveToFile : "<none>").PHP_EOL);
 									ec("Includes: ");
 									echo(join("\n", $settings->includes).PHP_EOL);
 									ec("Excludes: ");
@@ -431,6 +474,10 @@
 					}
 					$line = fgets($adbout, 1024);
 					$loline = strtolower($line);
+					
+					if ($saveToFile) {
+						fwrite($saveToFile, $line);
+					}
 
 					if ($firstmessage) {
 						$firstmessage = false;
@@ -498,6 +545,10 @@
 				ec("Exiting...");
 				break;
 			}
+		}
+		
+		if ($saveToFile) {
+			fclose($saveToFile);
 		}
 
 		ec("Finished.");
