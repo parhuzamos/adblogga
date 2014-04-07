@@ -166,7 +166,7 @@
 
     function ec($message, $breakline = true) {
     	global $fg, $bg;
-    	echo(c("[adblogga]", $fg['black'], $bg['yellow_dim']).c(" ".@date("H:i:s")." ", $fg['white'], $bg['black_dim'])." ".$message.($breakline ? PHP_EOL : ""));
+    	echo(c("[adblogga]", $fg['black'], $bg['yellow_dim']).c(" ".date("H:i:s")." ", $fg['white'], $bg['black_dim'])." ".$message.($breakline ? PHP_EOL : ""));
     }
 
     function outputLine($line, $isIncluded, $onlyProcessId) {
@@ -210,8 +210,10 @@
     function setup() {
 		date_default_timezone_set(date_default_timezone_get());
 
-    	@pcntl_signal(SIGTERM, "signal_handler");
-    	@pcntl_signal(SIGINT, "signal_handler");
+		if (function_exists('pcntl_signal1')) {
+			pcntl_signal(SIGTERM, "signal_handler");
+			pcntl_signal(SIGINT, "signal_handler");
+		}
 
     	if (file_exists(ADB) == FALSE) {
     		echo("Error: adb executable not found. Please, define the ANDROID_HOME environment variable which should point to your Android SDK root.\n");
