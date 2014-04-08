@@ -382,6 +382,18 @@
 									ec("Loading profile '{$settings->profile}' from '{$settings->profileFileName}'.");
 									ec("Press Enter to continue...", false);
 									fgets(STDIN);
+								} else if ($input[0] == "a") {
+									$append = appendSettings(substr($input, 1));
+									foreach($settings as $key => $value) {
+										if (is_array($settings->$key)) {
+											$settings->$key = array_unique(array_merge($settings->$key, $append->$key));
+										} else {
+											$settings->$key = $append->$key;
+										}
+									}
+									ec("Appending profile '{$append->profile}' from '{$append->profileFileName}'.");
+									ec("Press Enter to continue...", false);
+									fgets(STDIN);
 								} else if ($input[0] == "s") {
 									$settings->profile = substr($input, 1);
 									$settings->profileFileName = getProfileFilename($settings->profile);
@@ -450,6 +462,7 @@
 									ec("Accepted commands are:");
 									ec("p<packagename>			only show messages from given package (com.example.application1)");
 									ec("l<profile>				load profile: current settings are overwritten from this profile");
+									ec("a<profile>				append profile: this profile is added to the current settings");
 									ec("s<profile>				save profile: current settings are overwriting the given profile");
 									ec("+<something>			add to include list");
 									ec("-<something>			add to exclude list");
