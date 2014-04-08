@@ -1,12 +1,17 @@
 #!/usr/bin/php
 <?php
 
+	define("APPLICATION", "adblogga");
+	define("VERSION", "v1.0");
+	define("DESCRIPTION", "Color coded ADB (Android Debug Bridge) logcat output with on-the-fly configurable filters for any part of the log entry.");
+
 	define("ADB", getenv("ANDROID_HOME")."/platform-tools/adb");
 
 	define("ADB_COMMAND_LINE", ADB." logcat -v time");
 	define("LINE_REG_EXP", '/^([^\s]+)\s+([^\s]+)\s+([A-Z])\/(.*?)\((.*?)\):\s(.*)$/');
 
 	define("MAX_DELAY_BETWEEN_PROCID_UPDATE", 5);
+	define("DATE_FORMAT", "Ymd-His");
 
 	$fg = array();
 	$fg['black'] = '0;30';
@@ -278,7 +283,7 @@
 			$fn = $cmdlineoptions["s"];
 			if (isset($cmdlineoptions["S"])) {
 				$pi = pathinfo($fn);
-				$fn = sprintf("%s%s%s-%s.%s",$pi["dirname"], DIRECTORY_SEPARATOR, $pi["filename"], date("Ymd-His"), $pi["extension"]);
+				$fn = sprintf("%s%s%s-%s.%s",$pi["dirname"], DIRECTORY_SEPARATOR, $pi["filename"], date(DATE_FORMAT), $pi["extension"]);
 			}
 			$settings->saveToFile = $fn;
 			if (touch($settings->saveToFile) === FALSE) {
@@ -312,10 +317,35 @@
 		return $settings;		
     }
     
+    function showHelp() {
+		echo(sprintf("%s %s", APPLICATION, VERSION).PHP_EOL);
+		echo(PHP_EOL);
+		echo(DESCRIPTION.PHP_EOL);
+		echo(PHP_EOL);
+		echo("Usage: ".APPLICATION." [option]".PHP_EOL);
+		echo(PHP_EOL);
+		echo("Options:".PHP_EOL);
+		echo(PHP_EOL);
+		echo("    -p<com.example>                     Show only messages from the com.example package/app.".PHP_EOL);
+		echo("    -P<profile>                         Load the given profile.".PHP_EOL);
+		echo("    -c<clear-string>                    Clear the terminal if \"clear-string\" is found in a message.".PHP_EOL);
+		echo("    -s<log-filename>                    Save the messages to \"log-filename\".".PHP_EOL);
+		echo("    -S                                  Append ".DATE_FORMAT." to the \"log-filename\". Must be used with -s<log-filename>.".PHP_EOL);
+		echo("    -h, --help                          This help.".PHP_EOL);
+		echo("".PHP_EOL);
+		echo(PHP_EOL);
+    	
+    }
+    
 
     function main() {
     	global $processIds;
     	global $settings;
+    	
+    	if (isset(getopt(null,array("help::"))["help"]) || isset(getopt("h::")["h"])) {
+    		showHelp();
+    		exit(0);
+    	}
 
     	$descriptorspec = array(
     			0 => array('pipe', 'r'), // stdin
@@ -323,6 +353,7 @@
     			2 => array('pipe', 'a') // stderr
     	);
 
+    	
     	$settings = loadSettings(getopt("p::P::c::s::S::"));
     	
 		ec("Started.");
