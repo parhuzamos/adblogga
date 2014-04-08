@@ -2,7 +2,7 @@
 <?php
 
 	define("APPLICATION", "adblogga");
-	define("VERSION", "v1.0");
+	define("VERSION", "v1.1");
 	define("DESCRIPTION", "Color coded ADB (Android Debug Bridge) logcat output with on-the-fly configurable filters for any part of the log entry.");
 
 	define("ADB", getenv("ANDROID_HOME")."/platform-tools/adb");
