@@ -75,7 +75,16 @@
 		public $onlyPackage = null;
 		
 		public $saveToFile = null;
-	}
+		
+		function __construct($json = null) {
+			if ($json != null) {
+				$obj = json_decode($json);
+				foreach ($obj as $key => $value) {
+					$this->$key = $value;
+				}
+			}
+		}
+ 	}
 	
 	$settings = null;
 
@@ -257,7 +266,7 @@
 			$fn = getProfileFilename($profile);
 			if (file_exists($fn)) {
 				try {
-					$settings = json_decode(file_get_contents($fn));	
+					$settings = new Settings(file_get_contents($fn));
 					$settings->profileFileName = $fn;
 				} catch (Exception $e) {
 					ec("Error occoured while loading profile '$profile' from the file '$fn': ".$e);
@@ -301,7 +310,7 @@
 		$fn = getProfileFilename($profile);
 		if (file_exists($fn)) {
 			try {
-				$settings = json_decode(file_get_contents($fn));	
+				$settings = new Settings(file_get_contents($fn));
 				$settings->profileFileName = $fn;
 			} catch (Exception $e) {
 				ec("Error occoured while loading profile '$profile' from the file '$fn': ".$e);
