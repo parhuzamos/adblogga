@@ -416,9 +416,17 @@
 							$input = trim($input);
 							if ($input) {
 								if ($input[0] == "p") {
-									$settings->onlyPackage = strtolower(substr($input, 1));
+									$pack = trim(strtolower(substr($input, 1)));
+									if ($pack == "*") {
+										$pack = "";
+									}
+									$settings->onlyPackage = $pack;
 									saveSettings();
-									ec("Showing log entries from package: \"".$settings->onlyPackage."\".");
+									if ($pack != "") {
+										ec("Showing log entries from package: \"".$settings->onlyPackage."\".");
+									} else {
+										ec("Showing log entries from all packages.");
+									}
 									waitEnter();
 								} else if ($input[0] == "l") {
 									$settings = loadSettings(array("P" => substr($input, 1)));
