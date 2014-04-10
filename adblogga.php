@@ -182,6 +182,11 @@
     	global $fg, $bg;
     	echo(c("[adblogga]", $fg['black'], $bg['yellow_dim']).c(" ".date("H:i:s")." ", $fg['white'], $bg['black_dim'])." ".$message.($breakline ? PHP_EOL : ""));
     }
+    
+    function waitEnter() {
+    	ec("Press Enter to continue...", false);
+    	fgets(STDIN);
+    }
 
     function outputLine($line, $isIncluded, $onlyProcessId) {
     	global $typecolors, $fg, $bg;
@@ -260,11 +265,10 @@
     }
     
     function loadSettings($cmdlineoptions) {
-    	$profile = @$cmdlineoptions["P"];
-    	
-		if ($profile != null) {
+		if (($profile = @$cmdlineoptions["P"]) != null) {
 			$fn = getProfileFilename($profile);
 			if (file_exists($fn)) {
+				ec("Loading profile '{$profile}' from '{$fn}'.");
 				try {
 					$settings = new Settings(file_get_contents($fn));
 					$settings->profileFileName = $fn;
@@ -273,13 +277,13 @@
 					exit(1);
 				}
 			} else {
-				ec("The profile '$profile' has no settings saved yet.");
+				ec("The profile '$profile' does not exist yet (file not found: {$fn}). Using defaults.");
+				waitEnter();
 				$settings = new Settings();
 				$settings->profile = $profile;
 				$settings->profileFileName = $fn;
 			}
-		}
-		if ($profile == null) {
+		} else {
 			$settings = new Settings();
 		}
 		if (isset($cmdlineoptions["p"])) {
@@ -415,13 +419,10 @@
 									$settings->onlyPackage = strtolower(substr($input, 1));
 									saveSettings();
 									ec("Showing log entries from package: \"".$settings->onlyPackage."\".");
-									ec("Press Enter to continue...", false);
-									fgets(STDIN);
+									waitEnter();
 								} else if ($input[0] == "l") {
 									$settings = loadSettings(array("P" => substr($input, 1)));
-									ec("Loading profile '{$settings->profile}' from '{$settings->profileFileName}'.");
-									ec("Press Enter to continue...", false);
-									fgets(STDIN);
+									waitEnter();
 								} else if ($input[0] == "a") {
 									$append = appendSettings(substr($input, 1));
 									foreach($settings as $key => $value) {
@@ -432,15 +433,13 @@
 										}
 									}
 									ec("Appending profile '{$append->profile}' from '{$append->profileFileName}'.");
-									ec("Press Enter to continue...", false);
-									fgets(STDIN);
+									waitEnter();
 								} else if ($input[0] == "s") {
 									$settings->profile = substr($input, 1);
 									$settings->profileFileName = getProfileFilename($settings->profile);
 									saveSettings();
 									ec("Saving profile '{$settings->profile}' to '{$settings->profileFileName}'.");
-									ec("Press Enter to continue...", false);
-									fgets(STDIN);
+									waitEnter();
 								} else if ($input == "c") {
 									exec('reset');
 									ec("Clear command received.");
@@ -469,8 +468,7 @@
 									}
 									ec("Excludes are: ");
 									echo(var_export($settings->excludes).PHP_EOL);
-									ec("Press Enter to continue...", false);
-									fgets(STDIN);
+									waitEnter();
 								} else if ($input[0] == "+") {
 									if ($input == "+*") {
 										$settings->includes = array();
@@ -483,8 +481,7 @@
 									}
 									ec("Includes are: ");
 									echo(var_export($settings->includes).PHP_EOL);
-									ec("Press Enter to continue...", false);
-									fgets(STDIN);
+									waitEnter();
 								} else if ($input == "!") {
 									ec("Settings: ");
 									echo("Package: ".($settings->onlyPackage ? $settings->onlyPackage : "<none>").PHP_EOL);
@@ -495,8 +492,7 @@
 									echo(join("\n", $settings->includes).PHP_EOL);
 									ec("Excludes: ");
 									echo(join("\n", $settings->excludes).PHP_EOL);
-									ec("Press Enter to continue...", false);
-									fgets(STDIN);
+									waitEnter();
 								} else if ($input == "?") {
 									ec("Help.");
 									ec("Accepted commands are:");
@@ -555,7 +551,7 @@
 					}
 
 					if ($settings->onlyPackage && ((strpos($loline, $settings->onlyPackage) !== false) && ((strpos($line, "ActivityManager") !== false) || (strpos($line, "WindowState") !== false) || (strpos($line, "ACTIVITY_STATE") !== false)))) {
-						ec("Updating process ids (\"$settings->onlyPackage\")...");
+						ec("Updating process ids (\"$settings->onlyPackage\")... $line");
 						updateProcessIds(true);
 					}
 
