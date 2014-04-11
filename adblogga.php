@@ -524,7 +524,11 @@
 							} else {
 								//exec('reset');
 								//ec("Clearing screen...");
-								ec(str_repeat("-", 170));
+								$separator = str_repeat("-", 170);
+								ec($separator);
+								if ($saveToFile) {
+									fwrite($saveToFile, $separator);
+								}
 							}
 							stream_set_blocking(STDIN, 0);
 						}
