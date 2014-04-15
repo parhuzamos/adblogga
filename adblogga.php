@@ -227,7 +227,7 @@
     }
 
     function setup() {
-		date_default_timezone_set(date_default_timezone_get());
+		@date_default_timezone_set(@date_default_timezone_get());
 
 		if (function_exists('pcntl_signal1')) {
 			pcntl_signal(SIGTERM, "signal_handler");
