@@ -330,6 +330,27 @@
 		return $settings;		
     }
     
+    function listProfiles($dir = null) {
+    	if ($dir == null) {
+    		ec("List of profiles:");
+			$home = getenv("HOME");
+			listProfiles($home."/.config/adblogga");
+			
+			if (!file_exists($home."/.config")) {
+				listProfiles($home."/.adblogga");
+			}
+		} else {
+			$d = dir($dir);
+			while (false !== ($entry = $d->read())) {
+			   	$pi = pathinfo($entry);
+			   	if ($pi["extension"] == "json") {
+			   		ec("    {$pi["filename"]}");
+			   	}
+			}
+			$d->close();
+		}
+    }
+    
     function showHelp() {
 		echo(sprintf("%s %s", APPLICATION, VERSION).PHP_EOL);
 		echo(PHP_EOL);
@@ -431,6 +452,9 @@
 								} else if ($input[0] == "l") {
 									$settings = loadSettings(array("P" => substr($input, 1)));
 									waitEnter();
+								} else if ($input[0] == "L") {
+									listProfiles();
+									waitEnter();
 								} else if ($input[0] == "a") {
 									$append = appendSettings(substr($input, 1));
 									foreach($settings as $key => $value) {
@@ -502,10 +526,10 @@
 									echo(join("\n", $settings->excludes).PHP_EOL);
 									waitEnter();
 								} else if ($input == "?") {
-									ec("Help.");
 									ec("Accepted commands are:");
 									ec("p<packagename>			only show messages from given package (com.example.application1)");
 									ec("l<profile>				load profile: current settings are overwritten from this profile");
+									ec("L                       list available profiles");
 									ec("a<profile>				append profile: this profile is added to the current settings");
 									ec("s<profile>				save profile: current settings are overwriting the given profile");
 									ec("+<something>			add to include list");
