@@ -540,6 +540,7 @@
 									ec("exit 					exit adblogga");
 									ec("x 						exit adblogga");
 									ec("?						this help");
+									waitEnter();
 								} else if (($input == "exit") || ($input == "x")) {
 									break;
 								} else {
