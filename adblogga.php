@@ -277,6 +277,7 @@
 				exit(1);
 			}
 			$deviceDef = "-s ".$cmdlineoptions["d"];
+			define("DEVICE", $cmdlineoptions["d"]);
 		} else {
 			$deviceDef = "";
 			exec(ADB." devices", $out, $status);
@@ -284,9 +285,10 @@
 			$out = split(PHP_EOL, trim(join(PHP_EOL, $out)));
 	    	if ($status == 0) {
 	    		$c = count($out);
-	    		if ($c == 2 && (trim($out[1]) == "")) {
+	    		if ($c == 1) {
 	    			// no device
 	    			$deviceDef = "";
+	    			define("DEVICE", "<any>");
 	    		} else if ($c > 2) {
 	    			// multiple devices
 	    			ecError("Multiple devices found. Select one device and restart with -d<device> parameter.");
@@ -300,6 +302,7 @@
 	    			$d = trim($out[1]);
 	    			$d = substr($d, 0, strpos($d, "\t"));
 	    			$deviceDef = "-s ".$d;
+	    			define("DEVICE", $d);
 	    		}
 	    	}
 	    	
@@ -673,6 +676,7 @@
 
 			if ($exited) {
 				ec("Restarting...");
+				ec("Waiting for ".DEVICE." to connect...");
 			} else {
 				ec("Exiting...");
 				break;
