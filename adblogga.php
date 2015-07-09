@@ -7,7 +7,6 @@
 
 	define("ADB", getenv("ANDROID_HOME")."/platform-tools/adb");
 
-	define("ADB_COMMAND_LINE", ADB." logcat -v time");
 	define("LINE_REG_EXP", '/^([^\s]+)\s+([^\s]+)\s+([A-Z])\/(.*?)\((.*?)\):\s(.*)$/');
 
 	define("MAX_DELAY_BETWEEN_PROCID_UPDATE", 5);
@@ -98,6 +97,7 @@
 		shell_exec("nohup adb shell ps >$lastProcCollectFilename &");
 	}
 
+	//TODO: don't call to often!!!
 	function updateProcessIds($force = false, $filter = null) {
 		global $lastProcCollectTime;
 		global $processIds;
@@ -112,8 +112,8 @@
 
 	    $filter = strtolower($filter);
 
-	    exec(ADB." shell ps", $out, $status);
-
+	    exec(ADB." shell ps 2>/dev/null", $out, $status);
+	    
 	    if ($status == 0) {
 	        $i = 0;
 
@@ -181,6 +181,11 @@
     function ec($message, $breakline = true) {
     	global $fg, $bg;
     	echo(c("[adblogga]", $fg['black'], $bg['yellow_dim']).c(" ".date("H:i:s")." ", $fg['white'], $bg['black_dim'])." ".$message.($breakline ? PHP_EOL : ""));
+    }
+    
+    function ecError($message, $breakline = true) {
+    	global $fg, $bg;
+    	echo(c("[adblogga]", $fg['white'], $bg['red']).c(" ".date("H:i:s")." ", $fg['white'], $bg['black_dim'])." ".$message.($breakline ? PHP_EOL : ""));
     }
     
     function waitEnter() {
@@ -265,6 +270,42 @@
     }
     
     function loadSettings($cmdlineoptions) {
+		$deviceDef = "";
+		if (isset($cmdlineoptions["d"])) {
+			if ($cmdlineoptions["d"] === false) {
+				ecError("No device specified! Check your command line.");
+				exit(1);
+			}
+			$deviceDef = "-s ".$cmdlineoptions["d"];
+		} else {
+			$deviceDef = "";
+			exec(ADB." devices", $out, $status);
+
+			$out = split(PHP_EOL, trim(join(PHP_EOL, $out)));
+	    	if ($status == 0) {
+	    		$c = count($out);
+	    		if ($c == 2 && (trim($out[1]) == "")) {
+	    			// no device
+	    			$deviceDef = "";
+	    		} else if ($c > 2) {
+	    			// multiple devices
+	    			ecError("Multiple devices found. Select one device and restart with -d<device> parameter.");
+	    			ec("List of devices: ");
+	    			foreach(array_splice($out, 1) as $line) {
+	    				ec("    ".$line);
+	    			}
+	    			exit(1);
+	    		} else {
+	    			// one device only
+	    			$d = trim($out[1]);
+	    			$d = substr($d, 0, strpos($d, "\t"));
+	    			$deviceDef = "-s ".$d;
+	    		}
+	    	}
+	    	
+		}
+		define("ADB_COMMAND_LINE", ADB." {$deviceDef} logcat -v time");
+    	
 		if (($profile = @$cmdlineoptions["P"]) != null) {
 			$fn = getProfileFilename($profile);
 			if (file_exists($fn)) {
@@ -360,6 +401,7 @@
 		echo(PHP_EOL);
 		echo("Options:".PHP_EOL);
 		echo(PHP_EOL);
+		echo("    -d<device>                          Use the specified device (only necessary if multiple devices are connected).".PHP_EOL);
 		echo("    -p<com.example>                     Show only messages from the com.example package/app.".PHP_EOL);
 		echo("    -P<profile>                         Load the given profile.".PHP_EOL);
 		echo("    -c<clear-string>                    Clear the terminal if \"clear-string\" is found in a message.".PHP_EOL);
@@ -384,11 +426,11 @@
     	$descriptorspec = array(
     			0 => array('pipe', 'r'), // stdin
     			1 => array('pipe', 'w'), // stdout
-    			2 => array('pipe', 'a') // stderr
+    			2 => array('pipe', 'w'), // stderr
     	);
 
     	
-    	$settings = loadSettings(getopt("p::P::c::s::S::"));
+    	$settings = loadSettings(getopt("d::p::P::c::s::S::"));
     	
 		ec("Started.");
 		stream_set_blocking(STDIN, 0);
@@ -483,7 +525,7 @@
 								} else if ($input[0] == "-") {
 									$exclude = strtolower(substr($input, 1));
 									if ($exclude) {
-										$in = array_search($exclude, $settings->includes);
+										$in = @array_search($exclude, $settings->includes);
 										if ($in !== false) {
 											ec("Removed from includes: ".$exclude);
 											unset($settings->includes[$in]);
