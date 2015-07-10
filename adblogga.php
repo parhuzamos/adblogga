@@ -278,6 +278,7 @@
 			}
 			$deviceDef = "-s ".$cmdlineoptions["d"];
 			define("DEVICE", $cmdlineoptions["d"]);
+			define("DEVICEDEF", $deviceDef);
 		} else {
 			$deviceDef = "";
 			exec(ADB." devices", $out, $status);
@@ -289,6 +290,7 @@
 	    			// no device
 	    			$deviceDef = "";
 	    			define("DEVICE", "<any>");
+	    			define("DEVICEDEF", $deviceDef);
 	    		} else if ($c > 2) {
 	    			// multiple devices
 	    			ecError("Multiple devices found. Select one device and restart with -d<device> parameter.");
@@ -303,6 +305,7 @@
 	    			$d = substr($d, 0, strpos($d, "\t"));
 	    			$deviceDef = "-s ".$d;
 	    			define("DEVICE", $d);
+	    			define("DEVICEDEF", $deviceDef);
 	    		}
 	    	}
 	    	
@@ -522,7 +525,7 @@
 									ec("Clear command received.");
 									continue;
 								} else if ($input == "cc") {
-									exec(ADB.' logcat -c && reset');
+									exec(ADB.' '.DEVICEDEF.' logcat -c && reset');
 									ec("Clear command for logcat received.");
 									continue;
 								} else if ($input[0] == "-") {
@@ -659,7 +662,7 @@
 
 					if ($settings->clear) {
 						if (strpos($line, $settings->clear) !== FALSE) {
-							exec(ADB.' logcat -c && reset');
+							exec(ADB.' '.DEVICEDEF.' logcat -c && reset');
 							ec("Clear pattern found. Clearing output. ( ".$line." )");
 						}
 					}
