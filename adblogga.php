@@ -353,8 +353,60 @@
 				ec("Saving output to \"{$settings->saveToFile}\".");
 			}
 		}
+		if (isset($cmdlineoptions["i"])) {
+			$f = $cmdlineoptions["i"];
+			if (!is_array($f)) {
+				$f=array($f);
+			}
+			foreach($f as $v) {
+				addInclude($settings, $v, false);
+			}
+		}
+		if (isset($cmdlineoptions["e"])) {
+			$f = $cmdlineoptions["e"];
+			if (!is_array($f)) {
+				$f=array($f);
+			}
+			foreach($f as $v) {
+				addExclude($settings, $v, false);
+			}
+		}
 
 		return $settings;		
+    }
+    
+    function addInclude(&$settings, $value, $dosave = false) {
+		if ($value == "*") {
+			$settings->includes = array();
+		} else {
+			$settings->includes[] = strtolower($value);
+			$settings->includes = array_unique($settings->includes);
+		}
+		ec("Including: $value");
+		if ($dosave && $settings->profile) {
+			saveSettings();
+		}
+    }
+    
+    function addExclude(&$settings, $value, $dosave = false) {
+		$exclude = strtolower($value);
+		if ($exclude) {
+			$in = @array_search($exclude, $settings->includes);
+			if ($in !== false) {
+				ec("Removed from includes: ".$exclude);
+				unset($settings->includes[$in]);
+				if ($settings->profile) {
+					saveSettings();
+				}
+			} else {
+				$settings->excludes[] = $exclude;
+				$settings->excludes = array_unique($settings->excludes);
+				if ($dosave && $settings->profile) {
+					saveSettings();
+				}
+			}
+			ec("Excluding: $exclude");
+		}
     }
     
     function appendSettings($profile) {
@@ -410,6 +462,8 @@
 		echo("    -d<device>                          Use the specified device (only necessary if multiple devices are connected).".PHP_EOL);
 		echo("    -p<com.example>                     Show only messages from the com.example package/app.".PHP_EOL);
 		echo("    -P<profile>                         Load the given profile.".PHP_EOL);
+		echo("    -i<filter>                          Include this filter. Can be specified many times.".PHP_EOL);
+		echo("    -e<filter>                          Exclude this filter. Can be specified many times.".PHP_EOL);
 		echo("    -c<clear-string>                    Clear the terminal if \"clear-string\" is found in a message.".PHP_EOL);
 		echo("    -s<log-filename>                    Save the messages to \"log-filename\".".PHP_EOL);
 		echo("    -S                                  Append ".DATE_FORMAT." to the \"log-filename\". Must be used with -s<log-filename>.".PHP_EOL);
@@ -436,7 +490,7 @@
     	);
 
     	
-    	$settings = loadSettings(getopt("d::p::P::c::s::S::"));
+    	$settings = loadSettings(getopt("d::p::P::c::s::S::i::e::"));
     	
 		ec("Started.");
 		stream_set_blocking(STDIN, 0);
@@ -529,39 +583,15 @@
 									ec("Clear command for logcat received.");
 									continue;
 								} else if ($input[0] == "-") {
-									$exclude = strtolower(substr($input, 1));
-									if ($exclude) {
-										$in = @array_search($exclude, $settings->includes);
-										if ($in !== false) {
-											ec("Removed from includes: ".$exclude);
-											unset($settings->includes[$in]);
-											if ($settings->profile) {
-												saveSettings();
-											}
-										} else {
-											$settings->excludes[] = $exclude;
-											$settings->excludes = array_unique($settings->excludes);
-											if ($settings->profile) {
-												saveSettings();
-											}
-										}
-									}
-									ec("Excludes are: ");
-									echo(var_export($settings->excludes).PHP_EOL);
-									waitEnter();
+									addExclude($settings, substr($input, 1));
+									// ec("Excludes are: ");
+									// echo(var_export($settings->excludes).PHP_EOL);
+									// waitEnter();
 								} else if ($input[0] == "+") {
-									if ($input == "+*") {
-										$settings->includes = array();
-									} else {
-										$settings->includes[] = strtolower(substr($input, 1));
-										$settings->includes = array_unique($settings->includes);
-									}
-									if ($settings->profile) {
-										saveSettings();
-									}
-									ec("Includes are: ");
-									echo(var_export($settings->includes).PHP_EOL);
-									waitEnter();
+									addInclude($settings, substr($input, 1));
+									// ec("Includes are: ");
+									// echo(var_export($settings->includes).PHP_EOL);
+									// waitEnter();
 								} else if ($input == "!") {
 									ec("Settings: ");
 									echo("Package: ".($settings->onlyPackage ? $settings->onlyPackage : "<none>").PHP_EOL);

@@ -68,6 +68,22 @@ adblogga -p="com.example.application1"
 adblogga -Pdefault
 ```
 
+* -i"string"
+
+	Add an include filter when starting:
+```
+adblogga -iimportant-message
+adblogga -i"Important Message"
+```
+
+* -e"string"
+
+	Add an exclude filter when starting:
+```
+adblogga -enever-show-this
+adblogga -e"Never show this"
+```
+
 * -c"string"
 
     If *string* occours in any message, the screen is cleared. Usefull for catching application start to clear the screen.
