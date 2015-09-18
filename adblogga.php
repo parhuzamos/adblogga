@@ -230,6 +230,138 @@
 
 		echo(PHP_EOL);
     }
+    
+    function outputHTMLLine($line, $isIncluded, $onlyProcessId) {
+    	global $typecolors, $fg, $bg;
+
+		$match = array();
+		if (!preg_match(LINE_REG_EXP, $line, $match)) {
+			echo($line);
+			return;
+		}
+
+		//skip lines not matching the given processId
+		$processId = $match[5];
+		if (($isIncluded == false) && (($onlyProcessId != $processId) && ($onlyProcessId != null))) {
+			return;
+		}
+
+		//date+time
+		echo("<span class='datetime'>".$match[2]."</span>");
+
+		//process
+		echo("<span class='process'>".$processId."</span>");
+
+		//thread?
+		//echo(c(str_pad($match[4], 8, ' ', STR_PAD_LEFT), $fg['black'], $bg['black_bright']));
+
+		//tag
+		$tag = substr(trim($match[4]), 0, 32);
+		$c = colorForTag($tag);
+		$c = str_replace(";", "", $c);
+		echo("<span class='tag color-$c[0]'>".$tag."</span>");
+
+		//type
+		$c = $typecolors[$match[3]];
+		$c = str_replace(";", "", $c);
+		echo("<span class='type color-$c[0] color-bg-$c[1]'>".$match[3]."</span>");
+
+		echo("<span class='msg'>".$match[6]."</span>");
+
+		echo("<br>".PHP_EOL);
+    }
+    
+    
+    function response($success = null, $error = null) {
+    	$response = new StdClass();
+    	$response->success = $success != null;
+    	if ($success != null) {
+    		foreach($success as $key=>$value) {
+    			$response->$key = $value;
+    		}
+    	} else {
+    		$response->error = $error;
+    	}
+		echo(json_encode($response));
+		exit(1);
+    }
+    
+    function invalidUpload() {
+    	$message = <<<MESSAGE
+Error! No file data was received.
+Send a file like this:
+$ curl -F file=@/home/user/filename.ext http://adblogga.csinalom.com/adblogga.php
+MESSAGE;
+		response(null, $message);
+    }
+    
+    function createColoredTXT($filename) {
+    	$outfilename = $filename.".txt";
+		if ($f = fopen($filename, "r")) {
+			try {
+				ob_start();
+				while ($line = fgets($f)) {
+					outputLine($line, false, null);
+				}
+				file_put_contents($outfilename, ob_get_contents());
+				ob_end_clean();
+				
+				return "http://adblogga.csinalom.com/".$outfilename;
+			} catch (Exception $e) {
+				fclose($f);
+				unlink($filename);					
+			}
+		}
+    }
+    
+    function createColoredHTML($filename, $md5) {
+    	$outfilename = $filename.".html";
+		if ($f = fopen($filename, "r")) {
+			try {
+				ob_start();
+				while ($line = fgets($f)) {
+					outputHTMLLine($line, false, null);
+				}
+				file_put_contents($outfilename, ob_get_contents());
+				ob_end_clean();
+				
+				return "http://adblogga.csinalom.com/?id=$md5";
+			} catch (Exception $e) {
+				fclose($f);
+				unlink($filename);					
+			}
+		}
+    	return false;
+    }
+    
+    function processUploadedData() {
+    	if (!isset($_SERVER["HTTP_HOST"])) {
+    		return false;
+    	}
+		if (isset($_FILES["file"])) {
+			$filename = $_FILES["file"]["tmp_name"];
+			$md5 = md5($filename);
+			$target = "data/".$md5;
+			if (move_uploaded_file($filename, $target)) {
+				$txt = createColoredTXT($target);
+				$html = createColoredHTML($target, $md5);
+				
+				//TODO: bit.ly links here!!! but don't include token ;)
+				response(
+         			array(
+				         "id" => $md5, 
+				         "txt" => $txt,
+				         "html" => $html,
+	         		)
+				);
+			} else {
+				invalidUpload();
+			}
+		} else {
+			invalidUpload();
+		}
+	    exit;
+    }
 
     function setup() {
 		@date_default_timezone_set(@date_default_timezone_get());
@@ -371,8 +503,43 @@
 				addExclude($settings, $v, false);
 			}
 		}
+		if (isset($cmdlineoptions["o"])) {
+			fileUpload($cmdlineoptions);
+		}
 
 		return $settings;		
+    }
+    
+    function fileUpload($cmdlineoptions) {
+		$filename = $cmdlineoptions["o"];
+		if (file_exists($filename)) {
+			ec("Uploading: $filename...");
+			$post = array("file" => "@$filename");
+			
+			$c = curl_init("http://adblogga.csinalom.com/adblogga.php");
+			curl_setopt($c, CURLOPT_POST, true);
+			curl_setopt($c, CURLOPT_POSTFIELDS, $post);
+			curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+			$result = curl_exec($c);
+			curl_close($c);
+			try {
+				$response = json_decode($result);
+				if ($response->success) {
+					ec("Upload finished.");
+					ec("View online: ".$response->html);
+					ec("View in terminal: $ curl \"".$response->txt."\"");
+				} else {
+					ec("Upload error: ".$response->error);
+				}
+			} catch (Exception $e) {
+				ec("Not a valid response returned: ".$e);
+				exit(1);
+			}
+		} else {
+			ec("Error: file \"$filename\" does not exist.");
+			exit(1);
+		}
+		exit;
     }
     
     function addInclude(&$settings, $value, $dosave = false) {
@@ -466,6 +633,7 @@
 		echo("    -e<filter>                          Exclude this filter. Can be specified many times.".PHP_EOL);
 		echo("    -c<clear-string>                    Clear the terminal if \"clear-string\" is found in a message.".PHP_EOL);
 		echo("    -s<log-filename>                    Save the messages to \"log-filename\".".PHP_EOL);
+		echo("    -o<log-filename>                    Upload the log file and get and url where it can be viewed.".PHP_EOL);
 		echo("    -S                                  Append ".DATE_FORMAT." to the \"log-filename\". Must be used with -s<log-filename>.".PHP_EOL);
 		echo("    -h, --help                          This help.".PHP_EOL);
 		echo("".PHP_EOL);
@@ -490,7 +658,7 @@
     	);
 
     	
-    	$settings = loadSettings(getopt("d::p::P::c::s::S::i::e::"));
+    	$settings = loadSettings(getopt("d::p::P::c::s::S::i::e::o::"));
     	
 		ec("Started.");
 		stream_set_blocking(STDIN, 0);
@@ -610,6 +778,7 @@
 									ec("L                       list available profiles");
 									ec("a<profile>				append profile: this profile is added to the current settings");
 									ec("s<profile>				save profile: current settings are overwriting the given profile");
+									ec("o<filename>				get an url where file can be viewed online");
 									ec("+<something>			add to include list");
 									ec("-<something>			add to exclude list");
 									ec("!						show current settings (package, profile, includes, excludes, ...)");
@@ -723,5 +892,6 @@
 		ec("Finished.");
     }
 
+    processUploadedData();
     setup();
     main();
