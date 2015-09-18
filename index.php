@@ -9,18 +9,8 @@
 		<meta charset="UTF-8">
 		<title>adblogga -  online</title>
 		<style type="text/css">
-			#header {
-				left: 0px;
-				top: 0px;
-				margin: 4px;
-				padding: 4px;
-			}
-			
-			#header #id {
-				width: 20em;
-			}
-		
 			#log {
+				
 				border: 1px solid gray;
 			    font-family: monospace;
 			    font-size: 11px;
@@ -93,6 +83,37 @@
 			.color-bg-4022 { background-color: #333333;} 
 			.color-bg-100 { background-color: black;} 
 			
+			/*********************************************************************************/
+			#header {
+				left: 0px;
+				top: 0px;
+				margin: 4px;
+				padding: 4px;
+				height: 24px;
+			}
+			
+			#header div {
+				margin-right: 4px;
+			}
+			
+			#header #id {
+				width: 20em;
+			}
+			
+			#load-container {
+				float: left;
+			}
+			
+			#upload-container {
+				float: right;
+			}
+			
+			.progress {
+				display: none;
+			}
+			.result {
+				display: none;
+			}
 		</style>
 		<script type="text/javascript" src="http://code.jquery.com/jquery.min.js"></script>
 		<script type="text/javascript">
@@ -100,14 +121,72 @@
 			 	$("#load").click(function() {
 			 		window.location = "?id="+$("#id").val();
 			 	});
+			 	
+			 	$("#upload").click(function() {
+			 		try {
+				 		$("#upload-container .static").hide();
+				 		$("#upload-container .progress").show();
+				 		$("#upload-container .progress").text("Uploading "+$("#file")[0].files[0].name+", "+$("#file")[0].files[0].size+" bytes...");
+				 		
+				 		var data = new FormData();
+				 		data.append("file", $("#file")[0].files[0]);
+				 		
+				 		$.ajax({
+				 			url: "/adblogga.php",
+				 			type: "POST",
+				 			data: data,
+				 			cache: false,
+				 			dataType: "json",
+				 			processData: false,
+				 			contentType: false
+				 		}).done(function(result) {
+				 			console.log(result);
+				 			$("#upload-container .result").show();
+				 			if (result.success) {
+				 				$("#upload-container .result .message").text("Upload success: ");
+				 				$("#upload-container .result .link").text(result.html).attr("href", result.html);
+				 			}
+				 		}).fail(function(error) {
+				 			$("#upload-container .static").show();
+			 				console.error(error);
+				 		}).always(function() {
+				 			$("#upload-container .progress").hide();
+				 		});
+			 		} catch (error) {
+			 			console.error(error);
+			 			$("#upload-container .progress").hide();
+			 			$("#upload-container .static").show();
+			 		}
+			 	});
+
+				$("#upload-new").click(function() {
+					$("#file").val("");
+					$("#upload-container .progress").hide();
+					$("#upload-container .result").hide();
+					$("#upload-container .static").show();
+				});
 			});
 		</script>
 	</head>
 	
 	<body>
 		<div id="header">
-			<div id="id-to-load">
-				ID to load: <input type="text" id="id" value="<?=$id ? $id : ""?>" /><button id="load">Load</button>
+			<div id="load-container">
+				ID to load: <input type="text" id="id" value="<?=$id ? $id : ""?>" />
+				<button id="load">Load</button>
+			</div>
+			<div id="upload-container">
+				<div class="progress">
+				</div>
+				<div class="static">
+					File to upload: <input type="file" name="file" id="file"><button id="upload">Upload</button>
+				</div>
+				<div class="result">
+					<span class="message"></span>
+					<a class="link" href="#" target="_blank"></a>
+					<button id="upload-new">New upload</button>
+				</div>
+				
 			</div>
 		</div>
 		<div id="log">
