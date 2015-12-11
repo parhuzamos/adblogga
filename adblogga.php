@@ -503,6 +503,7 @@ MESSAGE;
 		}
 		if (isset($cmdlineoptions["o"])) {
 			fileUpload($cmdlineoptions["o"]);
+			exit;
 		}
 		
 		if (isset($cmdlineoptions["publish"])) {
@@ -553,7 +554,6 @@ MESSAGE;
 			ec("Error: file \"$filename\" does not exist.");
 			exit(1);
 		}
-		exit;
     }
     
     function addInclude(&$settings, $value, $dosave = false) {
