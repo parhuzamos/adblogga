@@ -649,7 +649,7 @@ MESSAGE;
 		echo("    -s<log-filename>                    Save the messages to \"log-filename\".".PHP_EOL);
 		echo("    -o<log-filename>                    Upload the log file and get and url where it can be viewed.".PHP_EOL);
 		echo("    -S                                  Append ".DATE_FORMAT." to the \"log-filename\". Must be used with -s<log-filename>.".PHP_EOL);
-		echo("    --publish                           Clear and then save the messages to a temp file and upload them and get the urls (like -o).".PHP_EOL);
+		echo("    --publish                           Clear and then save the messages to a temp file and when exiting, upload them and get the urls (like -o<log-filename>).".PHP_EOL);
 		echo("    -h, --help                          This help.".PHP_EOL);
 		echo("".PHP_EOL);
 		echo(PHP_EOL);
