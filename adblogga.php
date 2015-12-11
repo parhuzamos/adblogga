@@ -782,6 +782,16 @@ MESSAGE;
 									// ec("Includes are: ");
 									// echo(var_export($settings->includes).PHP_EOL);
 									// waitEnter();
+								} else if ($input[0] == "o") {
+									if ($settings->saveToFile) {
+										fclose($saveToFile);
+										fileUpload($settings->saveToFile);
+										$saveToFile = fopen($settings->saveToFile, "a");
+										waitEnter();
+									} else {
+										ec("Error: not saving messages to file :(. Next time tart with -s<log-filename>");
+										waitEnter();
+									}
 								} else if ($input == "!") {
 									ec("Settings: ");
 									echo("Package: ".($settings->onlyPackage ? $settings->onlyPackage : "<none>").PHP_EOL);
@@ -800,6 +810,7 @@ MESSAGE;
 									ec("L                       list available profiles");
 									ec("a<profile>              append profile: this profile is added to the current settings");
 									ec("s<profile>              save profile: current settings are overwriting the given profile");
+									ec("o                       if currently saving to messages to file, get an url where messages can be viewed online (like --publish), incremental");
 									ec("+<something>            add to include list");
 									ec("-<something>            add to exclude list");
 									ec("!                       show current settings (package, profile, includes, excludes, ...)");
