@@ -481,12 +481,7 @@ MESSAGE;
 				$fn = sprintf("%s%s%s-%s.%s",$pi["dirname"], DIRECTORY_SEPARATOR, $pi["filename"], date(DATE_FORMAT), $pi["extension"]);
 			}
 			$settings->saveToFile = $fn;
-			if (touch($settings->saveToFile) === FALSE) {
-				ec("Can't save to file \"{$fn}\".");
-				exit(1);
-			} else {
-				ec("Saving output to \"{$settings->saveToFile}\".");
-			}
+			testOutputFile($settings->saveToFile);
 		}
 		if (isset($cmdlineoptions["i"])) {
 			$f = $cmdlineoptions["i"];
@@ -507,14 +502,29 @@ MESSAGE;
 			}
 		}
 		if (isset($cmdlineoptions["o"])) {
-			fileUpload($cmdlineoptions);
+			fileUpload($cmdlineoptions["o"]);
+		}
+		
+		if (isset($cmdlineoptions["publish"])) {
+			exec(ADB.' '.DEVICEDEF.' logcat -c && reset');
+			$settings->saveToFile = tempnam(null, null);
+			testOutputFile($settings->saveToFile);
+			$settings->inpublish = true;
 		}
 
 		return $settings;		
     }
     
-    function fileUpload($cmdlineoptions) {
-		$filename = $cmdlineoptions["o"];
+    function testOutputFile($filename) {
+		if (touch($filename) === FALSE) {
+			ec("Can't save to file \"{$fn}\".");
+			exit(1);
+		} else {
+			ec("Saving output to \"{$filename}\".");
+		}
+	}
+    
+    function fileUpload($filename) {
 		if (file_exists($filename)) {
 			ec("Uploading: $filename...");
 			$post = array("file" => "@$filename");
@@ -530,7 +540,8 @@ MESSAGE;
 				if ($response->success) {
 					ec("Upload finished.");
 					ec("View online: ".$response->html);
-					ec("View in terminal: $ curl \"".$response->txt."\"");
+					ec("View in terminal: ");
+					ec("$ curl -s \"".$response->txt."\" | less -R");
 				} else {
 					ec("Upload error: ".$response->error);
 				}
@@ -638,6 +649,7 @@ MESSAGE;
 		echo("    -s<log-filename>                    Save the messages to \"log-filename\".".PHP_EOL);
 		echo("    -o<log-filename>                    Upload the log file and get and url where it can be viewed.".PHP_EOL);
 		echo("    -S                                  Append ".DATE_FORMAT." to the \"log-filename\". Must be used with -s<log-filename>.".PHP_EOL);
+		echo("    --publish                           Clear and then save the messages to a temp file and upload them and get the urls (like -o).".PHP_EOL);
 		echo("    -h, --help                          This help.".PHP_EOL);
 		echo("".PHP_EOL);
 		echo(PHP_EOL);
@@ -661,7 +673,7 @@ MESSAGE;
     	);
 
     	
-    	$settings = loadSettings(getopt("d::p::P::c::s::S::i::e::o::"));
+    	$settings = loadSettings(getopt("d::p::P::c::s::S::i::e::o::", array("publish::")));
     	
 		ec("Started.");
 		stream_set_blocking(STDIN, 0);
@@ -890,6 +902,10 @@ MESSAGE;
 		
 		if ($saveToFile) {
 			fclose($saveToFile);
+		}
+
+		if (@$settings->inpublish) {
+			fileUpload($settings->saveToFile);
 		}
 
 		ec("Finished.");
