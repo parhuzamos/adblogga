@@ -81,6 +81,9 @@
 				foreach ($obj as $key => $value) {
 					$this->$key = $value;
 				}
+				
+				$this->excludes = (array) $this->excludes;
+				$this->includes = (array) $this->includes;
 			}
 		}
  	}
