@@ -761,6 +761,13 @@ MESSAGE;
 									exec('reset');
 									ec("Clear command received.");
 									continue;
+								} else if ($input == "cw") {
+									exec('reset');
+									if ($settings->saveToFile) {
+										fclose($saveToFile);
+										$saveToFile = fopen($settings->saveToFile, "w");
+									}
+									ec("Clear command and file truncate request received.");
 								} else if ($input == "cc") {
 									exec(ADB.' '.DEVICEDEF.' logcat -c && reset');
 									ec("Clear command for logcat received.");
@@ -797,6 +804,7 @@ MESSAGE;
 									ec("-<something>            add to exclude list");
 									ec("!                       show current settings (package, profile, includes, excludes, ...)");
 									ec("c                       clear screen");
+									ec("cw                      clear screen and truncate log file if any (see -s<log-filename>)");
 									ec("cc                      clear logcat and screen");
 									ec("exit                    exit adblogga");
 									ec("x                       exit adblogga");
