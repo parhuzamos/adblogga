@@ -51,7 +51,7 @@
 			}
 
 			.msg {
-			    color: gray;
+			    color: white;
 			    white-space: pre;
 			}
 
