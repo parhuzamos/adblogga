@@ -846,7 +846,7 @@ MESSAGE;
 					if ($adbdata === false) {
 						continue;
 					}
-					$line = fgets($adbout, 1024);
+					$line = fgets($adbout, 4096);
 					$loline = strtolower($line);
 					
 					if ($saveToFile) {
