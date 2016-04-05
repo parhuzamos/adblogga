@@ -202,13 +202,13 @@
 		$match = array();
 		if (!preg_match(LINE_REG_EXP, $line, $match)) {
 			echo($line);
-			return;
+			return true;
 		}
 
 		//skip lines not matching the given processId
 		$processId = $match[5];
 		if (($isIncluded == false) && (($onlyProcessId != $processId) && ($onlyProcessId != null))) {
-			return;
+			return false;
 		}
 
 		//date+time
@@ -232,6 +232,8 @@
 		echo(' '.$match[6]);
 
 		echo(PHP_EOL);
+		
+		return true;
     }
     
     function outputHTMLLine($linenum, $line, $isIncluded, $onlyProcessId) {
@@ -901,7 +903,10 @@ MESSAGE;
 						}
 					}
 
-					outputLine($line, $isIncluded, $processId);
+					$printed = outputLine($line, $isIncluded, $processId);
+					if ($printed && $saveToFile) {
+						fwrite($saveToFile, $line);
+					}
 				}
 			} else {
 				ec("Error: could not start \"".ADB_COMMAND_LINE."\"");
