@@ -234,7 +234,7 @@
 		echo(PHP_EOL);
     }
     
-    function outputHTMLLine($line, $isIncluded, $onlyProcessId) {
+    function outputHTMLLine($linenum, $line, $isIncluded, $onlyProcessId) {
     	global $typecolors, $fg, $bg;
 
 		$match = array();
@@ -250,7 +250,7 @@
 		}
 
 		//date+time
-		echo("<span class='datetime'>".$match[2]."</span>");
+		echo("<a name=\"{$linenum}\" href=\"#{$linenum}\"><span class='datetime'>".$match[2]."</span></a>");
 
 		//process
 		echo("<span class='process'>".$processId."</span>");
@@ -322,8 +322,10 @@ MESSAGE;
 		if ($f = fopen($filename, "r")) {
 			try {
 				ob_start();
+				$linenum = 1;
 				while ($line = fgets($f)) {
-					outputHTMLLine($line, false, null);
+					outputHTMLLine($linenum, $line, false, null);
+					$linenum++;
 				}
 				file_put_contents($outfilename, ob_get_contents());
 				ob_end_clean();
