@@ -418,7 +418,7 @@ MESSAGE;
 			$deviceDef = "";
 			exec(ADB." devices", $out, $status);
 
-			$out = split(PHP_EOL, trim(join(PHP_EOL, $out)));
+			$out = preg_split('/'.PHP_EOL.'/', trim(join(PHP_EOL, $out)));
 	    	if ($status == 0) {
 	    		$c = count($out);
 	    		if ($c == 1) {
@@ -773,7 +773,10 @@ MESSAGE;
 									ec("Clear command for logcat received.");
 									continue;
 								} else if ($input[0] == "-") {
-									addExclude($settings, substr($input, 1));
+								    $a = preg_split("/,/", substr($input, 1));
+								    foreach($a as $v) {
+                                        addExclude($settings, trim($v));
+                                    }
 									// ec("Excludes are: ");
 									// echo(var_export($settings->excludes).PHP_EOL);
 									// waitEnter();
@@ -868,7 +871,7 @@ MESSAGE;
 					}
 
 					if ($settings->onlyPackage && ((strpos($loline, $settings->onlyPackage) !== false) && ((strpos($line, "ActivityManager") !== false) || (strpos($line, "WindowState") !== false) || (strpos($line, "ACTIVITY_STATE") !== false)))) {
-						ec("Updating process ids (\"$settings->onlyPackage\")... $line");
+						//ec("Updating process ids (\"$settings->onlyPackage\")... $line");
 						updateProcessIds(true);
 					}
 
