@@ -61,6 +61,15 @@
 	$lastProcCollectTime = 0;
 	$lastProcCollectFilename = "";
 	$processIds = array();
+
+	function resetArrayIndexes($array) {
+	    $a = array();
+	    foreach($array as $v) {
+	        $a[] = $v;
+        }
+        sort($a);
+        return $a;
+    }
 	
 	class Settings {
 		public $excludes = array();
@@ -82,8 +91,8 @@
 					$this->$key = $value;
 				}
 				
-				$this->excludes = (array) $this->excludes;
-				$this->includes = (array) $this->includes;
+				$this->excludes = resetArrayIndexes($this->excludes);
+				$this->includes = resetArrayIndexes($this->includes);
 			}
 		}
  	}
@@ -384,7 +393,7 @@ MESSAGE;
     
     function saveSettings() {
     	global $settings;
-    	
+
     	if ($settings->profile) {
     		file_put_contents($settings->profileFileName, json_encode($settings));
     	}
